@@ -241,8 +241,9 @@ For Jenkins you need two plugins (these can be installed from the Jenkins UI):
 
 Adding the App
 ==============
-I took the example from [DockerCon EU Tutorials](https://github.com/docker/dceu_tutorials/blob/master/9-cicd-with-docker.md) and modified it to use Marathon / Mesos and Weave multi-host overlay networks instead of Swarm and Compose with Docker multi-host networking.
-The changed code is part of this repository unter voteapps.
+I took the example from Docker and modified it to use Marathon / Mesos and Weave multi-host overlay networks instead of Swarm and Compose with Docker multi-host networking.
+The changed code is in the repository [https://github.com/schmidtse/example-voting-app](https://github.com/schmidtse/example-voting-app).
+Because my environment was made to run without internet connection it assumes that the clone is in /git/repos/ on the Jenkins slave.
 
 Marathon Deploy Tool
 ====================
