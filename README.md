@@ -264,3 +264,6 @@ KNOWN ISSUES
 ============
 * REX-RAY service does not always start (fails), manual restart works (most likely wrong start order due to missing dependency definitions, e.g. for ScaleIO SDC)
 * Only one overlay network possible, should use Weave as plugin or use native Docker multi-host networking to overcome this limitation
+* use REX-RAY in the app for redis and postgres again
+* use REX-RAY for jenkins and registry (or even better use ECS via S3 for registry)
+* check if docker/example-voting-app might works as well or even be a better choice
