@@ -5,7 +5,9 @@ I started with a Centos 7 install. Make sure to use Centos 7 or newer, as older 
 I used Centos 7 Minimal Image which was just fine for what is needed.
 Next install some tools that make the networkmgmt. easier.
 
-`<yum install net-tools vim>`
+```
+yum install net-tools vim
+```
 
 In case you decide to run these as VMs, i can highly recommend to create a template and fix eth0 for your clones (if you do not have eth0 it should all be fine already).
 To do so in the template (before shutdown and clone):
@@ -22,19 +24,25 @@ systemctl stop firewalld
 
 Ensure to set the hostname per server (my hosts are named mesos01c7 mesos02c7 mesos03c7):
 
-`<hostnamectl set-hostname mesos01c7>`
+```
+hostnamectl set-hostname mesos01c7
+```
 
 Make sure to have DNS entries for all your server (you will need at least 3 server). 
 Or modify the hosts file for each one.
 
-`<vi /etc/hosts>`
+```
+vi /etc/hosts
+```
 
 Docker Install
 ==============
 This comes first, as several services later will be deployed as docker containers.
 So let's make sure we have the latest updates:
 
-`<yum update>`
+```
+yum update
+```
 
 Add the docker repository:
 
@@ -167,20 +175,29 @@ ScaleIO SDC Install
 The ScaleIO cluster in this case was outside of the environment, so only the SDC (client) is needed per host to be able to mount volumes into the containers.
 
 ScaleIO needs some additional libraries:
-`<yum install numactl>`
+
+```
+yum install numactl
+```
 
 Next install the rpm for Centos 7 (i am using latest 1.32.3 release of ScaleIO). Get it for free from [ScaleIO Free & Frictionless](http://emc.com/getScaleIO).
 
-`<rpm -Uvh /tmp/EMC-ScaleIO-sdc-1.32-3455.5.el7.x86_64.rpm>`
+```
+rpm -Uvh /tmp/EMC-ScaleIO-sdc-1.32-3455.5.el7.x86_64.rpm
+```
 
 If you used templates and had the SDC already included it is important to reset the IDs (not needed for per node install):
 
-`<rm -f /bin/emc/scaleio/drv_cfg.txt>`
-`<rm -f /etc/emc/scaleio/ini_guid>`
+```
+rm -f /bin/emc/scaleio/drv_cfg.txt
+rm -f /etc/emc/scaleio/ini_guid
+```
 
 And now you'll have to join it with the ScaleIO cluster (IPs provided are for the two MDMs)
 
-`</opt/emc/scaleio/sdc/bin/drv_cfg --add_mdm --ip <mdm_ip_1>,<mdm_ip_2>>`
+```
+/opt/emc/scaleio/sdc/bin/drv_cfg --add_mdm --ip <mdm_ip_1>,<mdm_ip_2>
+```
 
 REX-RAY Install
 ===============
