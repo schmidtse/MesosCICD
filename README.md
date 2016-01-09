@@ -1,4 +1,4 @@
-# MesosCICD
+# Mesos Continuous Integration and Continuous Deployment Pipeline
 Mesos, Marathon, Jenkins, Docker, Weave, Docker Registry, ScaleIO, RexRay and a little App :)
 
 I started with a Centos 7 install. Make sure to use Centos 7 or newer, as older kernels will not allow you to have Docker 1.9, which is a prerequisite for Volume Driver support and others.
@@ -60,6 +60,34 @@ And start the service, as well as enable it for autostart:
 ```
 service docker start
 systemctl enable docker.service
+```
+
+Weave Install
+=============
+With the application spread out on the Mesos cluster it is important to have a multi-host overlay network.
+This can be achieved with Dockers native multi-host networking or Weave.
+Some entry level guide (with much information missing) can be found here [Weave Mesos Marathon Guide](http://weave.works/guides/platform/mesos-marathon/os/centos/cloud/vagrant/index.html).
+
+To install weave run:
+
+```
+curl -L git.io/weave -o /usr/local/bin/weave
+chmod a+x /usr/local/bin/weave
+```
+
+Next the services have to be installed (can be found in this repository). They have to be copied to /etc/systemd/system/ and then following commands have to be run (includes the configuration of the peers that participate in the overlay network):
+
+```
+echo 'WEAVE_PEERS="mesos01c7 mesos02c7 mesos03c7"' > /etc/weave.env
+systemctl daemon-reload
+systemctl enable weave.service weaveproxy.service
+systemctl start weave.service weaveproxy.service
+```
+
+To use Weave locally (not from Marathon / Mesos) you will have to set the correct environment:
+
+```
+eval "$(weave env)"
 ```
 
 Mesos and Marathon Install
@@ -216,44 +244,23 @@ Adding the App
 I took the example from [DockerCon EU Tutorials](https://github.com/docker/dceu_tutorials/blob/master/9-cicd-with-docker.md) and modified it to use Marathon / Mesos and Weave multi-host overlay networks instead of Swarm and Compose with Docker multi-host networking.
 The changed code is part of this repository unter voteapps.
 
-Weave Install
-=============
-With the application spread out on the Mesos cluster it is important to have a multi-host overlay network.
-This can be achieved with Dockers native multi-host networking or Weave.
-Some entry level guide (with much information missing) can be found here [Weave Mesos Marathon Guide](http://weave.works/guides/platform/mesos-marathon/os/centos/cloud/vagrant/index.html).
+Marathon Deploy Tool
+====================
+It is possible to use curl to send a JSON to Marathon and this can be easily done from Jenkins. Unfortunatelly this has some drawbacks:
 
-To install weave run:
+1. No (easy) way to check if the deployment really succeeded (unless you would parse the response)
+2. No support for environment variables within JSON files
 
-```
-curl -L git.io/weave -o /usr/local/bin/weave
-chmod a+x /usr/local/bin/weave
-```
+As i needed both i used the Marathon Deploy Ruby Gem from here [GitHub Marathon Deploy](https://github.com/eBayClassifiedsGroup/marathon_deploy) which supports YAML, automatically checks the success of the deployment and also support environment variables.
 
-Next the services have to be installed (can be found in this repository). They have to be copied to /etc/systemd/system/ and then following commands have to be run (includes the configuration of the peers that participate in the overlay network):
+Installing is simple:
 
 ```
-echo 'WEAVE_PEERS="mesos01c7 mesos02c7 mesos03c7"' > /etc/weave.env
-systemctl daemon-reload
-systemctl enable weave.service weaveproxy.service
-systemctl start weave.service weaveproxy.service
-```
-
-To use Weave locally (not from Marathon / Mesos) you will have to set the correct environment:
-
-```
-eval "$(weave env)"
-
---------
-to expose env variables for deployments to marathon we need yaml support (ruby gem available)
-https://github.com/eBayClassifiedsGroup/marathon_deploy
-
 yum install gem
 gem install marathon_deploy
-
-=> super cool as it also checks on progress / success of deployment !!
-
+```
 
 KNOWN ISSUES
 ============
 * REX-RAY service does not always start (fails), manual restart works (most likely wrong start order due to missing dependency definitions, e.g. for ScaleIO SDC)
-
+* Only one overlay network possible, should use Weave as plugin or use native Docker multi-host networking to overcome this limitation
