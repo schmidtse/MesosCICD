@@ -195,51 +195,54 @@ update-ca-trust
 service docker restart
 ```
 
-------------
-setting up jenkins and builds with docker
+Jenkins Install
+===============
+For Jenkins it is again easiest to use a Docker container (for the master). There are also Docker containers for the slaves and the option to run "Docker in Docker", but it worked much more stable with running the Slave on one of the Mesos hosts (and is close to no setup work to make this happen).
+You could also use REX-RAY already at this step to utilize (and create on first use) a volume on ScaleIO.
 
+```
 docker run -d --restart=always -p 8081:8080 -p 50000:50000 -v /home/jenkins:/var/jenkins_home -u root jenkins
+```
 
-install "cloudbees docker build and publish plugin" and "git plugin"
-need a mesos slave cause can't run docker inside docker (master jenkins is a docker container) for docker build
+For Jenkins you need two plugins (these can be installed from the Jenkins UI):
 
-config of build job:
+```
+1. Cloudbees Docker build and publish plugin
+2. Git plugin
+```
 
+Adding the App
+==============
+I took the example from [DockerCon EU Tutorials](https://github.com/docker/dceu_tutorials/blob/master/9-cicd-with-docker.md) and modified it to use Marathon / Mesos and Weave multi-host overlay networks instead of Swarm and Compose with Docker multi-host networking.
+The changed code is part of this repository unter voteapps.
 
------------
-install git for dev example and push to jenkins with auto build of container !
-examples:
-https://clusterhq.com/2015/08/28/flying-with-marathon/
-http://container-solutions.com/continuous-delivery-with-docker-on-mesos-in-less-than-a-minute-part-2/
-https://github.com/docker/dceu_tutorials/blob/master/9-cicd-with-docker.md
+Weave Install
+=============
+With the application spread out on the Mesos cluster it is important to have a multi-host overlay network.
+This can be achieved with Dockers native multi-host networking or Weave.
+Some entry level guide (with much information missing) can be found here [Weave Mesos Marathon Guide](http://weave.works/guides/platform/mesos-marathon/os/centos/cloud/vagrant/index.html).
 
+To install weave run:
 
-to get rid of application group:
-curl -X DELETE -H "Content-type: application/json" localhost:8080/v2/groups/voteapps
------------
-and we need overlay networks as well, so we need weave:
-http://weave.works/guides/platform/mesos-marathon/os/centos/cloud/vagrant/index.html
-
+```
 curl -L git.io/weave -o /usr/local/bin/weave
 chmod a+x /usr/local/bin/weave
+```
 
-on primary node:
-weave launch
+Next the services have to be installed (can be found in this repository). They have to be copied to /etc/systemd/system/ and then following commands have to be run (includes the configuration of the peers that participate in the overlay network):
 
-on other nodes:
-weave launch mesos01c7
-
+```
 echo 'WEAVE_PEERS="mesos01c7 mesos02c7 mesos03c7"' > /etc/weave.env
-add weave.service and weaveproxy.service to /etc/systemd/system/
-enable and start them
+systemctl daemon-reload
+systemctl enable weave.service weaveproxy.service
+systemctl start weave.service weaveproxy.service
+```
 
-use weave locally (not from mesos):
+To use Weave locally (not from Marathon / Mesos) you will have to set the correct environment:
+
+```
 eval "$(weave env)"
 
-expose weave isolated containers (not needed as we have them in the weave and bridge network of docker at the same time => combine with port forwards):
-weave expose (gives the mesos hosts an ip address)
-iptables -t nat -A PREROUTING -p tcp -i ens160 --dport 50080 -j DNAT --to-destination $(weave dns-lookup voting-app):80
-iptables -t nat -A PREROUTING -p tcp -i ens160 --dport 50081 -j DNAT --to-destination $(weave dns-lookup result-app):80
 --------
 to expose env variables for deployments to marathon we need yaml support (ruby gem available)
 https://github.com/eBayClassifiedsGroup/marathon_deploy
@@ -249,20 +252,8 @@ gem install marathon_deploy
 
 => super cool as it also checks on progress / success of deployment !!
 
--------
-docker connect/attach: docker exec -i -t 665b4a1e17b6 bash
 
--------
-SIDE NOTE: grow FS
-- grow root disk in VMWare
-- fdisk /dev/sda
--- remove partition, create partition (will have extended size) -> sda2
-- pvresize /dev/sda2
-- lvextend -l +100%FREE /dev/centos/root
-- xfs_growfs -d /dev/centos/root
+KNOWN ISSUES
+============
+* REX-RAY service does not always start (fails), manual restart works (most likely wrong start order due to missing dependency definitions, e.g. for ScaleIO SDC)
 
-----------
-KNOWN ISSUES:
-- host with sio gateway is critical; hosts also have SIO on them, so can't restart two of them!!
-- rexray service does not start (fails), manual restart works (goes have to load SDC first or such)
-- 
