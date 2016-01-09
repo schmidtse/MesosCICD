@@ -1,0 +1,11 @@
+rexray:
+  storageDrivers:
+  - scaleio
+scaleio:
+  endpoint: https://sio_gateway/api
+  insecure: true
+  userName: admin
+  password: password
+  systemName: ScaleIO_01
+  protectionDomainName: PD1
+  storagePoolName: SSD
