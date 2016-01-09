@@ -172,30 +172,29 @@ systemctl enable rexray.service
 
 DOCKER REGISTRY INSTALL
 =======================
-The Docker Registry allows
-install registry on centos 7:
+The Docker Registry allows you to host your own images which is used in this case to build and publish the images from jenkins and then also pull them from there and deploy them on Mesos / Marathon.
 
+First you will need a set of certificates:
+
+```
 mkdir /certs
 openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /certs/registry.key -out /certs/registry.crt
-docker run -d -p 5000:5000 --restart=always --name registry -v `pwd`/certs:/certs -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt -e REGISTRY_HTTP_TLS_KEY=/certs/registry.key registry:2
+```
 
-on all nodes:
+Next you have to start the registry container:
+
+```
+docker run -d -p 5000:5000 --restart=always --name registry -v `pwd`/certs:/certs -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/registry.crt -e REGISTRY_HTTP_TLS_KEY=/certs/registry.key registry:2
+```
+
+And as a last step you will have to trust the certificates from all hosts which also requires a docker service restart. $DTR stands for the hostname of your registry host, in my case this was mesos01c7:
+
+```
 openssl s_client -connect $DTR:5000 -showcerts </dev/null 2> /dev/null | openssl x509 -outform PEM | sudo tee /etc/pki/ca-trust/source/anchors/$DTR.crt
 update-ca-trust
 service docker restart
-----------
-enable docker multihost networking
+```
 
-install a keyvalue store for global configs
-docker run -d -p 8500:8500 -h consul --name consul progrium/consul -server -bootstrap
-
-/usr/lib/systemd/system/docker.service add daemon flags
---cluster-store=consul://mesos01c7:8500/network --cluster-advertise=ens160:2375
-
-systemctl daemon-reload
-systemctl restart docker.service
-
-ISSUE: never worked !!
 ------------
 setting up jenkins and builds with docker
 
