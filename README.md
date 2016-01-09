@@ -120,6 +120,20 @@ To enable Weave from MEsos / Marathon all that is needed is to change the docker
 echo '/var/run/weave/weave.sock' > /etc/mesos-slave/docker_socket
 ```
 
+You can open a browser and point it to Port 5050 for Mesos and 8080 for Marathon.
+Additionally you can test everything with:
+
+```
+MASTER=$(mesos-resolve `cat /etc/mesos/zk`)
+mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
+```
+
+Or even post a new application to Marathon (example.json is part of this repository):
+
+```
+curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d@example.json
+```
+
 ScaleIO SDC Install
 ===================
 The ScaleIO cluster in this case was outside of the environment, so only the SDC (client) is needed per host to be able to mount volumes into the containers.
@@ -156,34 +170,9 @@ rexray service start
 systemctl enable rexray.service
 ```
 
---------
-
-
--------------
-
-http://<master-ip>:5050 
-http://<master-ip>:8080
-
-MASTER=$(mesos-resolve `cat /etc/mesos/zk`)
-mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
-
-----------
-curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d@/mesosconfigs/redis.json
-
--------
-start rexray service
-systemctl start rexray.service
-----------------------------
-install DTR on Centos 7: => FAILS FAILS FAILS !!
-docker run docker/trusted-registry install | \bash
-
-needed on all hosts using the DTR:
-export DTR=mesos01c7
-openssl s_client -connect $DTR:443 -showcerts </dev/null 2> /dev/null | openssl x509 -outform PEM | sudo tee /etc/pki/ca-trust/source/anchors/$DTR.crt
-update-ca-trust
-service docker restart
-docker login https://$DTR
--------------
+DOCKER REGISTRY INSTALL
+=======================
+The Docker Registry allows
 install registry on centos 7:
 
 mkdir /certs
