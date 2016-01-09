@@ -4,7 +4,7 @@ Mesos, Marathon, Jenkins, Docker, Weave, Docker Registry, ScaleIO, RexRay and a 
 I started with a Centos 7 install. Make sure to use Centos 7 or newer, as older kernels will not allow you to have Docker 1.9, which is a prerequisite for Volume Driver support and others.
 I used Centos 7 Minimal Image which was just fine for what is needed.
 Next install some tools that make the networkmgmt. easier.
-[](yum install net-tools vim)
+[net-tools install](yum install net-tools vim)
 
 rm -f /etc/udev/rules.d/70-persistent-net.rules
 remove UUID and MAC, etc.
