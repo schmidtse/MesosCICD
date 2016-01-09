@@ -10,45 +10,67 @@ Next install some tools that make the networkmgmt. easier.
 In case you decide to run these as VMs, i can highly recommend to create a template and fix eth0 for your clones (if you do not have eth0 it should all be fine already).
 To do so in the template (before shutdown and clone):
 
-`<
 1. remove UUID and MAC from vim /etc/sysconfig/network-scripts/ifcfg-eth0
 2. rm -f /etc/udev/rules.d/70-persistent-net.rules
->`
 
-------
-systemctl disable firewalld
-systemctl stop firewalld
+Next you should disable the firewall (proper thing here would be to add all the necessary exceptions):
 
-needs DNS entries => added to hosts file
-fix hostnames:
-hostnamectl set-hostname mesos01c7
-vi /etc/hosts
+`<systemctl disable firewalld>`
+`<systemctl stop firewalld>`
 
-mesos install:
-https://open.mesosphere.com/getting-started/install/
-sudo rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm
-sudo yum -y install mesos marathon mesosphere-zookeeper
+Ensure to set the hostname per server (my hosts are named mesos01c7 mesos02c7 mesos03c7):
 
-------
-SDC install
-yum install numactl
-rm -f /bin/emc/scaleio/drv_cfg.txt
-rm -f /etc/emc/scaleio/ini_guid
-rpm -e EMC-ScaleIO-sdc-1.32-3455.5.el7.x86_64
-rpm -Uvh /tmp/EMC-ScaleIO-sdc-1.32-3455.5.el7.x86_64.rpm
-/opt/emc/scaleio/sdc/bin/drv_cfg --add_mdm --ip 192.168.2.41,192.168.2.42
----------------
-docker install:
-yum update
+`<hostnamectl set-hostname mesos01c7>`
 
-sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
+Make sure to have DNS entries for all your server (you will need at least 3 server). 
+Or modify the hosts file for each one.
+
+`<vi /etc/hosts>`
+
+Mesos Install
+=============
+A great guide can be found at [Mesosphere Getting Started](https://open.mesosphere.com/getting-started/install/).
+
+In this case I decided to have slave and master on the same host:
+
+`<sudo rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm>`
+`<sudo yum -y install mesos marathon mesosphere-zookeeper>`
+
+ScaleIO SDC Install
+===================
+The ScaleIO cluster in this case was outside of the environment, so only the SDC (client) is needed per host to be able to mount volumes into the containers.
+
+ScaleIO needs some additional libraries:
+`<yum install numactl>`
+
+Next install the rpm for Centos 7 (i am using latest 1.32.3 release of ScaleIO). Get it for free from [ScaleIO Free & Frictionless](http://emc.com/getScaleIO).
+
+`<rpm -Uvh /tmp/EMC-ScaleIO-sdc-1.32-3455.5.el7.x86_64.rpm>`
+
+If you used templates and had the SDC already included it is important to reset the IDs (not needed for per node install):
+
+`<rm -f /bin/emc/scaleio/drv_cfg.txt>`
+`<rm -f /etc/emc/scaleio/ini_guid>`
+
+And now you'll have to join it with the ScaleIO cluster (IPs provided are for the two MDMs)
+
+`</opt/emc/scaleio/sdc/bin/drv_cfg --add_mdm --ip <mdm_ip_1>,<mdm_ip_2>>`
+
+Docker Install
+==============
+This comes first, as several services later will be deployed as docker containers.
+So let's make sure we have the latest updates
+
+`<yum update>`
+
+```sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
 [dockerrepo]
 name=Docker Repository
 baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
 enabled=1
 gpgcheck=1
 gpgkey=https://yum.dockerproject.org/gpg
-EOF
+EOF```
 
 yum install docker-engine
 
