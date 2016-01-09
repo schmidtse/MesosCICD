@@ -1,0 +1,18 @@
+{
+	"id": "testme",
+	"cmd": "while true; do echo Hello;sleep 10000; done",
+	"container": {
+		"type": "DOCKER",
+		"volumes": [],
+		"docker": {
+			"image": "ubuntu",
+			"network": "BRIDGE"
+			"parameters": [
+			{
+				"key": "hostname",
+				"value": "blablub.weave.local"
+			}
+			]
+		}
+	}
+}
