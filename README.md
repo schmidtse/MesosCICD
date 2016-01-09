@@ -159,7 +159,7 @@ mesos-execute --master=$MASTER --name="cluster-test" --command="sleep 5"
 Or even post a new application to Marathon (example.json is part of this repository):
 
 ```
-curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d@example.json
+curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d@/marathon/simple.json
 ```
 
 ScaleIO SDC Install
@@ -268,3 +268,4 @@ KNOWN ISSUES
 * use REX-RAY in the app for redis and postgres again
 * use REX-RAY for jenkins and registry (or even better use ECS via S3 for registry)
 * check if docker/example-voting-app might works as well or even be a better choice
+* check the marathon_deploy environment variables => not yet in the guide
