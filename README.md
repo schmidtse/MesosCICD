@@ -15,8 +15,10 @@ To do so in the template (before shutdown and clone):
 
 Next you should disable the firewall (proper thing here would be to add all the necessary exceptions):
 
-`<systemctl disable firewalld>`
-`<systemctl stop firewalld>`
+```
+systemctl disable firewalld
+systemctl stop firewalld
+```
 
 Ensure to set the hostname per server (my hosts are named mesos01c7 mesos02c7 mesos03c7):
 
@@ -27,14 +29,96 @@ Or modify the hosts file for each one.
 
 `<vi /etc/hosts>`
 
-Mesos Install
+Docker Install
+==============
+This comes first, as several services later will be deployed as docker containers.
+So let's make sure we have the latest updates:
+
+`<yum update>`
+
+Add the docker repository:
+
+```
+sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+```
+
+Install docker engine:
+
+```
+yum install docker-engine
+```
+
+And start the service, as well as enable it for autostart:
+
+```
+service docker start
+systemctl enable docker.service
+```
+
+Mesos and Marathon Install
 =============
 A great guide can be found at [Mesosphere Getting Started](https://open.mesosphere.com/getting-started/install/).
 
 In this case I decided to have slave and master on the same host:
 
-`<sudo rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm>`
-`<sudo yum -y install mesos marathon mesosphere-zookeeper>`
+```
+sudo rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-1.noarch.rpm
+sudo yum -y install mesos marathon mesosphere-zookeeper
+```
+
+Each server needs an unique ID (value between 1 and 255):
+
+```
+echo '1' > /var/lib/zookeeper/myid
+```
+
+Make sure to extend the configuration for Zookeeper with your servers:
+
+```
+sudo tee /etc/zookeeper/conf/zoo.cfg <<-'EOF'
+server.1=<mesos_server_1>:2888:3888
+server.2=<mesos_server_2>:2888:3888
+server.3=<mesos_server_3>:2888:3888
+EOF
+```
+
+```
+echo 'zk://<mesos_server_1>:2181,<mesos_server_2>:2181,<mesos_server_3>:2181/mesos' > /etc/mesos/zk
+```
+
+With 3 servers the quorum should be set to 2:
+
+```
+echo '2' > //etc/mesos-master/quorum
+```
+
+And finaly start the service (or restart if already running):
+
+```
+sudo systemctl start zookeeper
+```
+
+Next we setup Mesos and Marathon to use Docker and Weave. Most of the content can be found at [Mesosphere Docker Support](https://mesosphere.github.io/marathon/docs/native-docker.html)
+
+For Docker we have to add the containerizer and extend the timeouts to give time for docker image pulls:
+
+```
+echo 'docker,mesos' > /etc/mesos-slave/containerizers
+echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+```
+
+To enable Weave from MEsos / Marathon all that is needed is to change the docker socket to use:
+
+```
+echo '/var/run/weave/weave.sock' > /etc/mesos-slave/docker_socket
+```
 
 ScaleIO SDC Install
 ===================
@@ -56,64 +140,25 @@ And now you'll have to join it with the ScaleIO cluster (IPs provided are for th
 
 `</opt/emc/scaleio/sdc/bin/drv_cfg --add_mdm --ip <mdm_ip_1>,<mdm_ip_2>>`
 
-Docker Install
-==============
-This comes first, as several services later will be deployed as docker containers.
-So let's make sure we have the latest updates
+REX-RAY Install
+===============
+Next we install REX-RAY, the volume driver for Docker that integrates native with ScaleIO.
 
-`<yum update>`
-
-```sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
-[dockerrepo]
-name=Docker Repository
-baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
-enabled=1
-gpgcheck=1
-gpgkey=https://yum.dockerproject.org/gpg
-EOF```
-
-yum install docker-engine
-
-service docker start
-systemctl enable docker.service
-
-----------
-install and configure REX-Ray:
+```
 curl -sSL https://dl.bintray.com/emccode/rexray/install | sh -
-using /etc/rexray/config.yml
+```
+
+An example configuration file (/etc/rexray/config.yml) is part of this repository.
+Next start and enable the rexray service
+
+```
 rexray service start
----------
-setup mesos + marathon for docker:
-https://mesosphere.github.io/marathon/docs/native-docker.html
-echo 'docker,mesos' > /etc/mesos-slave/containerizers
-if you want to use weave, also add
-echo '/var/run/weave/weave.sock' > /etc/mesos-slave/docker_socket
-Increase the executor timeout to account for the potential delay in pulling a docker image to the slave.
-echo '5mins' > /etc/mesos-slave/executor_registration_timeout
+systemctl enable rexray.service
+```
 
 --------
 
-/etc/zookeeper/conf/zoo.cfg
-append: 
-server.1=1.1.1.1:2888:3888
-server.2=2.2.2.2:2888:3888
-server.3=3.3.3.3:2888:3888
 
-/etc/mesos/zk
-set:
-zk://192.168.2.81:2181,192.168.2.82:2181,192.168.2.83:2181/mesos
-
-/etc/mesos-master/quorum
-set: 
-2
-
-unique per node:
-set /var/lib/zookeeper/myid (value between 1 and 255)
-
-
-start services:
-restart
-sudo systemctl start zookeeper
 -------------
 
 http://<master-ip>:5050 
